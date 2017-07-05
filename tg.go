@@ -36,7 +36,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	filepath.Join(u.HomeDir, "teamgage")
+	dir = filepath.Join(u.HomeDir, "teamgage")
 	_, err = os.Stat(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
