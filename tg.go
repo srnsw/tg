@@ -16,6 +16,7 @@ import (
 
 	cdp "github.com/knq/chromedp"
 	cdptypes "github.com/knq/chromedp/cdp"
+	"github.com/knq/chromedp/client"
 )
 
 var (
@@ -68,7 +69,7 @@ func scrape() error {
 	ctxt, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	// create chrome instance
-	c, err := cdp.New(ctxt, cdp.WithLog(log.Printf))
+	c, err := cdp.New(ctxt, cdp.WithTargets(client.New().WatchPageTargets(ctxt)), cdp.WithLog(log.Printf))
 	if err != nil {
 		return err
 	}
@@ -89,16 +90,7 @@ func scrape() error {
 	tasks = append(tasks, screenshots(byts)...)
 	tasks = append(tasks, writes(byts)...)
 	// run task list
-	if err = c.Run(ctxt, tasks); err != nil {
-		return err
-	}
-	// shutdown chrome
-	err = c.Shutdown(ctxt)
-	if err != nil {
-		return err
-	}
-	// wait for chrome to finish
-	return c.Wait()
+	return c.Run(ctxt, tasks)
 }
 
 func screenshots(byts [][]byte) cdp.Tasks {
