@@ -23,6 +23,7 @@ var (
 	user = os.Getenv("TGUSER")
 	pass = os.Getenv("TGPASS")
 	dir  = filepath.Join(os.TempDir(), "teamgage")
+	then = time.Time{}
 )
 
 func main() {
@@ -35,39 +36,32 @@ func main() {
 			panic(err)
 		}
 	}
+	buf, err := ioutil.ReadFile(filepath.Join(dir, "latest"))
+	if err == nil {
+		(&then).GobDecode(buf)
+	}
 	http.HandleFunc("/tg", handler)
 	http.ListenAndServe(":8080", nil)
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	rec, err := recent()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if !rec {
-		if err = scrape(); err != nil {
+	if !(time.Now().Sub(then) < time.Hour*24) {
+		err := scrape()
+		if err == nil {
+			var buf []byte
+			then = time.Now()
+			buf, err = then.GobEncode()
+			if err == nil {
+				err = ioutil.WriteFile(filepath.Join(dir, "latest"), buf, 0644)
+			}
+		}
+		if err != nil {
+			log.Printf("error updating dashboard: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
 	http.ServeFile(w, r, filepath.Join(dir, "dashboard.png"))
-}
-
-func recent() (bool, error) {
-	buf, err := ioutil.ReadFile(filepath.Join(dir, "latest"))
-	if err == nil {
-		then := &time.Time{}
-		then.GobDecode(buf)
-		if time.Now().Sub(*then) < time.Hour*24 {
-			return true, nil
-		}
-	}
-	buf, err = time.Now().GobEncode()
-	if err != nil {
-		return false, err
-	}
-	return false, ioutil.WriteFile(filepath.Join(dir, "latest"), buf, 0644)
 }
 
 func scrape() error {
