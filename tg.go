@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/user"
 	"path/filepath"
 	"time"
 
@@ -20,15 +21,23 @@ import (
 )
 
 var (
-	team = os.Getenv("TGTEAM")
-	user = os.Getenv("TGUSER")
-	pass = os.Getenv("TGPASS")
-	dir  = filepath.Join(os.TempDir(), "teamgage")
-	then = time.Time{}
+	dir  string
+	then time.Time
+)
+
+var (
+	tgteam = os.Getenv("TGTEAM")
+	tguser = os.Getenv("TGUSER")
+	tgpass = os.Getenv("TGPASS")
 )
 
 func main() {
-	_, err := os.Stat(dir)
+	u, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+	filepath.Join(u.HomeDir, "teamgage")
+	_, err = os.Stat(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			err = os.MkdirAll(dir, 0777)
@@ -74,12 +83,12 @@ func scrape() error {
 		return err
 	}
 	tasks := cdp.Tasks{
-		cdp.Navigate(`https://www.teamgage.com/Account/Login?ReturnUrl=%2fPortal%2f10077%2fReports%2fTeam%2f` + team),
+		cdp.Navigate(`https://www.teamgage.com/Account/Login?ReturnUrl=%2fPortal%2f10077%2fReports%2fTeam%2f` + tgteam),
 		cdp.Sleep(5 * time.Second),
 		cdp.WaitVisible(`#Email`, cdp.ByID),
-		cdp.SendKeys(`#Email`, user, cdp.ByID),
+		cdp.SendKeys(`#Email`, tguser, cdp.ByID),
 		cdp.WaitVisible(`#Password`, cdp.ByID),
-		cdp.SendKeys(`#Password`, pass, cdp.ByID),
+		cdp.SendKeys(`#Password`, tgpass, cdp.ByID),
 		cdp.WaitVisible(`div.editor-submit > input.button-link`, cdp.ByQuery),
 		cdp.Click(`div.editor-submit > input.button-link`, cdp.ByQuery),
 		cdp.Sleep(2 * time.Second),
