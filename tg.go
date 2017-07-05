@@ -41,7 +41,7 @@ func main() {
 		(&then).GobDecode(buf)
 	}
 	http.HandleFunc("/tg", handler)
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":80", nil)
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
