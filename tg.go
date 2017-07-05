@@ -91,7 +91,7 @@ func scrape() error {
 		cdp.SendKeys(`#Password`, tgpass, cdp.ByID),
 		cdp.WaitVisible(`div.editor-submit > input.button-link`, cdp.ByQuery),
 		cdp.Click(`div.editor-submit > input.button-link`, cdp.ByQuery),
-		cdp.Sleep(2 * time.Second),
+		cdp.Sleep(10 * time.Second),
 		cdp.WaitVisible(`div.footer`, cdp.ByQuery),
 		cdp.WaitVisible(`div.form-content`, cdp.ByQuery),
 	}
