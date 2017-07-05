@@ -26,7 +26,7 @@ var (
 	tgteam = os.Getenv("TGTEAM")
 	tguser = os.Getenv("TGUSER")
 	tgpass = os.Getenv("TGPASS")
-	tgpath = os.Getevn("TGPATH")
+	tgpath = os.Getenv("TGPATH")
 )
 
 func main() {
@@ -37,7 +37,7 @@ func main() {
 		}
 		tgpath = filepath.Join(u.HomeDir, "teamgage")
 	}
-	_, err = os.Stat(tgpath)
+	_, err := os.Stat(tgpath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			err = os.MkdirAll(tgpath, 0777)
