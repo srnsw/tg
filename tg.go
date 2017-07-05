@@ -20,33 +20,33 @@ import (
 	"github.com/knq/chromedp/client"
 )
 
-var (
-	dir  string
-	then time.Time
-)
+var then time.Time
 
 var (
 	tgteam = os.Getenv("TGTEAM")
 	tguser = os.Getenv("TGUSER")
 	tgpass = os.Getenv("TGPASS")
+	tgpath = os.Getevn("TGPATH")
 )
 
 func main() {
-	u, err := user.Current()
-	if err != nil {
-		panic(err)
+	if tgpath == "" {
+		u, err := user.Current()
+		if err != nil {
+			panic(err)
+		}
+		tgpath = filepath.Join(u.HomeDir, "teamgage")
 	}
-	dir = filepath.Join(u.HomeDir, "teamgage")
-	_, err = os.Stat(dir)
+	_, err = os.Stat(tgpath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			err = os.MkdirAll(dir, 0777)
+			err = os.MkdirAll(tgpath, 0777)
 		}
 		if err != nil {
 			panic(err)
 		}
 	}
-	buf, err := ioutil.ReadFile(filepath.Join(dir, "latest"))
+	buf, err := ioutil.ReadFile(filepath.Join(tgpath, "latest"))
 	if err == nil {
 		(&then).GobDecode(buf)
 	}
@@ -62,7 +62,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			then = time.Now()
 			buf, err = then.GobEncode()
 			if err == nil {
-				err = ioutil.WriteFile(filepath.Join(dir, "latest"), buf, 0644)
+				err = ioutil.WriteFile(filepath.Join(tgpath, "latest"), buf, 0644)
 			}
 		}
 		if err != nil {
@@ -71,7 +71,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	http.ServeFile(w, r, filepath.Join(dir, "dashboard.png"))
+	http.ServeFile(w, r, filepath.Join(tgpath, "dashboard.png"))
 }
 
 func scrape() error {
@@ -118,7 +118,7 @@ func writes(byts [][]byte) cdp.Tasks {
 		if err != nil {
 			return err
 		}
-		return ioutil.WriteFile(filepath.Join(dir, "dashboard.png"), byt, 0644)
+		return ioutil.WriteFile(filepath.Join(tgpath, "dashboard.png"), byt, 0644)
 	})}
 }
 
