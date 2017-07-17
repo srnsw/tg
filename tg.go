@@ -67,21 +67,36 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		}
 		if err != nil {
 			log.Printf("error updating dashboard: %v", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
 		}
 	}
 	http.ServeFile(w, r, filepath.Join(tgpath, "dashboard.png"))
 }
 
-func scrape() error {
-	ctxt, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	// create chrome instance
-	c, err := cdp.New(ctxt, cdp.WithTargets(client.New().WatchPageTargets(ctxt)), cdp.WithLog(log.Printf))
+func interactive(tasks cdp.Tasks, ctx context.Context) error {
+	c, err := cdp.New(ctx, cdp.WithLog(log.Printf))
 	if err != nil {
 		return err
 	}
+	if err = c.Run(ctx, tasks); err != nil {
+		return err
+	}
+	if err = c.Shutdown(ctx); err != nil {
+		return err
+	}
+	return c.Wait()
+}
+
+func headless(ctx context.Context, tasks cdp.Tasks) error {
+	c, err := cdp.New(ctx, cdp.WithTargets(client.New().WatchPageTargets(ctx)), cdp.WithLog(log.Printf))
+	if err != nil {
+		return err
+	}
+	return c.Run(ctx, tasks)
+}
+
+func scrape() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	tasks := cdp.Tasks{
 		cdp.Navigate(`https://www.teamgage.com/Account/Login?ReturnUrl=%2fPortal%2f10077%2fReports%2fTeam%2f` + tgteam),
 		cdp.Sleep(5 * time.Second),
@@ -98,8 +113,7 @@ func scrape() error {
 	byts := make([][]byte, 8)
 	tasks = append(tasks, screenshots(byts)...)
 	tasks = append(tasks, writes(byts)...)
-	// run task list
-	return c.Run(ctxt, tasks)
+	return headless(ctx, tasks)
 }
 
 func screenshots(byts [][]byte) cdp.Tasks {
