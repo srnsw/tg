@@ -72,7 +72,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, filepath.Join(tgpath, "dashboard.png"))
 }
 
-func interactive(tasks cdp.Tasks, ctx context.Context) error {
+func interactive(ctx context.Context, tasks cdp.Tasks) error {
 	c, err := cdp.New(ctx, cdp.WithLog(log.Printf))
 	if err != nil {
 		return err
@@ -98,16 +98,15 @@ func scrape() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	tasks := cdp.Tasks{
-		cdp.Navigate(`https://www.teamgage.com/Account/Login?ReturnUrl=%2fPortal%2f10077%2fReports%2fTeam%2f` + tgteam),
+		cdp.Navigate(`https://www.teamgage.com/Account/Login?ReturnUrl=%2FPortal%2F10077%2FReports%2FSingleReport%2F` + tgteam),
 		cdp.Sleep(5 * time.Second),
 		cdp.WaitVisible(`#Email`, cdp.ByID),
 		cdp.SendKeys(`#Email`, tguser, cdp.ByID),
 		cdp.WaitVisible(`#Password`, cdp.ByID),
 		cdp.SendKeys(`#Password`, tgpass, cdp.ByID),
-		cdp.WaitVisible(`div.editor-submit > input.button-link`, cdp.ByQuery),
-		cdp.Click(`div.editor-submit > input.button-link`, cdp.ByQuery),
+		cdp.WaitVisible(`#login-btn`, cdp.ByID),
+		cdp.Click(`#login-btn`, cdp.ByID),
 		cdp.Sleep(10 * time.Second),
-		cdp.WaitVisible(`div.footer`, cdp.ByQuery),
 		cdp.WaitVisible(`div.form-content`, cdp.ByQuery),
 	}
 	byts := make([][]byte, 8)
@@ -119,7 +118,7 @@ func scrape() error {
 func screenshots(byts [][]byte) cdp.Tasks {
 	tasks := make(cdp.Tasks, 0, 16)
 	for i := range byts {
-		tasks = append(tasks, cdp.ScrollIntoView("div.header.dark-shadow", cdp.ByQuery)) // scroll back to top before each screenshot - otherwise goes squew-iff
+		tasks = append(tasks, cdp.ScrollIntoView("#content-header", cdp.ByID)) // scroll back to top before each screenshot - otherwise goes squew-iff
 		sel := fmt.Sprintf("div.dashboard.masonry > div:nth-child(%d)", i+1)
 		tasks = append(tasks, cdp.Screenshot(sel, &byts[i], cdp.ByQuery))
 	}
