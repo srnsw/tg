@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"image"
+	"image/color"
 	"image/draw"
 	"image/png"
 	"io/ioutil"
@@ -106,8 +107,8 @@ func scrape() error {
 		cdp.SendKeys(`#Password`, tgpass, cdp.ByID),
 		cdp.WaitVisible(`#login-btn`, cdp.ByID),
 		cdp.Click(`#login-btn`, cdp.ByID),
-		cdp.Sleep(10 * time.Second),
 		cdp.WaitVisible(`div.form-content`, cdp.ByQuery),
+		cdp.Sleep(30 * time.Second),
 	}
 	byts := make([][]byte, 8)
 	tasks = append(tasks, screenshots(byts)...)
@@ -143,6 +144,7 @@ func join(bs ...[]byte) ([]byte, error) {
 		Min: image.Point{0, 0},
 		Max: image.Point{206 * 4, 356 * 2},
 	})
+	draw.Draw(rgba, rgba.Bounds(), &image.Uniform{color.White}, image.ZP, draw.Src)
 	for i, v := range bs {
 		buf := bytes.NewBuffer(v)
 		img, err := png.Decode(buf)
