@@ -162,34 +162,102 @@ func writes(id string, byts [][]byte) cdp.Tasks {
 	})}
 }
 
-func join(id string, bs ...[]byte) ([]byte, error) {
-	if len(bs) > 8 {
-		return nil, fmt.Errorf("expecting 8 images or less, got %d", len(bs))
-	}
+func normalise(img image.Image) image.Image {
+	rect := edges(img)
 	rgba := image.NewRGBA(image.Rectangle{
 		Min: image.Point{0, 0},
-		Max: image.Point{206 * 4, 356 * 2},
+		Max: image.Point{rect.Max.X - rect.Min.X, rect.Max.Y - rect.Min.Y},
 	})
-	draw.Draw(rgba, rgba.Bounds(), &image.Uniform{color.White}, image.ZP, draw.Src)
+	draw.Draw(rgba, rgba.Bounds(), img, rect.Min, draw.Src)
+	return rgba
+}
+
+func edges(img image.Image) image.Rectangle {
+	return image.Rectangle{min(img), max(img)}
+}
+
+func min(img image.Image) image.Point {
+	white := color.RGBAModel.Convert(color.White)
+	max := img.Bounds().Max
+	for x := 0; x < max.X; x++ {
+		for y := 0; y < max.Y; y++ {
+			if img.At(x, y) != white {
+				// now add a white border
+				x, y = x-5, y-5
+				if x < 0 {
+					x = 0
+				}
+				if y < 0 {
+					y = 0
+				}
+				return image.Pt(x, y)
+			}
+		}
+	}
+	return image.Point{}
+}
+
+func max(img image.Image) image.Point {
+	white := color.RGBAModel.Convert(color.White)
+	max := img.Bounds().Max
+	for x := max.X - 1; x >= 0; x-- {
+		for y := max.Y - 1; y >= 0; y-- {
+			if img.At(x, y) != white {
+				// now add a white border
+				x, y = x+6, y+6
+				if x > max.X {
+					x = max.X
+				}
+				if y < max.Y {
+					y = max.Y
+				}
+				return image.Pt(x, y)
+			}
+		}
+	}
+	return image.Point{}
+}
+
+func join(bs ...[]byte) ([]byte, error) {
+	if len(bs) > 8 || len(bs) < 1 {
+		return nil, fmt.Errorf("expecting between 0 and 8 images, got %d", len(bs))
+	}
+	images := make([]image.Image, len(bs))
+	var maxX, maxY int
 	for i, v := range bs {
-		ioutil.WriteFile(filepath.Join(tgpath, id, strconv.Itoa(i)+".png"), v, 0644)
 		buf := bytes.NewBuffer(v)
 		img, err := png.Decode(buf)
 		if err != nil {
 			return nil, err
 		}
+		img = normalise(img)
+		if maxX == 0 {
+			maxX, maxY = img.Bounds().Max.X, img.Bounds().Max.Y
+		} else {
+			if maxX != img.Bounds().Max.X || maxY != img.Bounds().Max.Y {
+				return nil, fmt.Errorf("expecting all images to have same dimensions (%d, %d): got %d, %d", maxX, maxY, img.Bounds().Max.X, img.Bounds().Max.Y)
+			}
+		}
+		images[i] = img
+	}
+	rgba := image.NewRGBA(image.Rectangle{
+		Min: image.Point{0, 0},
+		Max: image.Point{maxX * 4, maxY * 2},
+	})
+	draw.Draw(rgba, rgba.Bounds(), &image.Uniform{color.White}, image.ZP, draw.Src)
+	for i, img := range images {
 		var w, h int
 		if i >= 4 {
-			w = (i - 4) * 206
-			h = 356
+			w = (i - 4) * maxX
+			h = maxY
 		} else {
-			w = i * 206
+			w = i * maxX
 		}
 		r := image.Rectangle{
 			Min: image.Point{w, h},
-			Max: image.Point{w + 206, h + 356},
+			Max: image.Point{w + maxX, h + maxY},
 		}
-		draw.Draw(rgba, r, img, image.ZP, draw.Src)
+		draw.Draw(rgba, r, img, image.Point{0, 0}, draw.Src)
 	}
 	wr := &bytes.Buffer{}
 	err := png.Encode(wr, rgba)
