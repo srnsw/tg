@@ -23,7 +23,10 @@ import (
 	"github.com/knq/chromedp/client"
 )
 
-var tgpath = os.Getenv("TGPATH")
+var (
+	tgpath  = os.Getenv("TGPATH")
+	serveAt = ":80"
+)
 
 func main() {
 	if tgpath == "" {
@@ -33,8 +36,9 @@ func main() {
 		}
 		tgpath = filepath.Join(u.HomeDir, "teamgage")
 	}
+	http.HandleFunc("/latest/", latestHandler)
 	http.HandleFunc("/team/", handler)
-	log.Fatal(http.ListenAndServe("localhost:5138", nil)) // :80
+	log.Fatal(http.ListenAndServe(serveAt, nil))
 }
 
 func latest(tid string) time.Time {
@@ -44,6 +48,16 @@ func latest(tid string) time.Time {
 		(&then).GobDecode(buf)
 	}
 	return then
+}
+
+func latestHandler(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimPrefix(r.URL.Path, "/latest/")
+	if _, err := strconv.Atoi(id); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	fmt.Fprint(w, latest(id).Format(time.RFC822))
+	return
 }
 
 type team struct {
@@ -154,7 +168,7 @@ func screenshots(byts [][]byte) cdp.Tasks {
 
 func writes(id string, byts [][]byte) cdp.Tasks {
 	return cdp.Tasks{cdp.ActionFunc(func(context.Context, cdptypes.Handler) error {
-		byt, err := join(id, byts...)
+		byt, err := join(byts...)
 		if err != nil {
 			return err
 		}
