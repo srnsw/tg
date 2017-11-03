@@ -178,7 +178,10 @@ func join(bs ...[]byte) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		var w, h int
+		var x, w, h int
+		if i == 0 { // hack because headless generates a larger first image for some reason
+			x = 103
+		}
 		if i >= 4 {
 			w = (i - 4) * 206
 			h = 356
@@ -189,7 +192,7 @@ func join(bs ...[]byte) ([]byte, error) {
 			Min: image.Point{w, h},
 			Max: image.Point{w + 206, h + 356},
 		}
-		draw.Draw(rgba, r, img, image.Point{0, 0}, draw.Src)
+		draw.Draw(rgba, r, img, image.Point{x, 0}, draw.Src)
 	}
 	wr := &bytes.Buffer{}
 	err := png.Encode(wr, rgba)
