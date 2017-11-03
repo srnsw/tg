@@ -14,6 +14,8 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	cdp "github.com/knq/chromedp"
@@ -21,14 +23,7 @@ import (
 	"github.com/knq/chromedp/client"
 )
 
-var then time.Time
-
-var (
-	tgteam = os.Getenv("TGTEAM")
-	tguser = os.Getenv("TGUSER")
-	tgpass = os.Getenv("TGPASS")
-	tgpath = os.Getenv("TGPATH")
-)
+var tgpath = os.Getenv("TGPATH")
 
 func main() {
 	if tgpath == "" {
@@ -47,32 +42,64 @@ func main() {
 			panic(err)
 		}
 	}
-	buf, err := ioutil.ReadFile(filepath.Join(tgpath, "latest"))
-	if err == nil {
-		(&then).GobDecode(buf)
-	}
-	http.HandleFunc("/tg", handler)
+	http.HandleFunc("/team/", handler)
 	log.Fatal(http.ListenAndServe(":80", nil))
 }
 
+func latest(tid string) time.Time {
+	var then time.Time
+	buf, err := ioutil.ReadFile(filepath.Join(tgpath, tid, "latest"))
+	if err == nil {
+		(&then).GobDecode(buf)
+	}
+	return then
+}
+
+type team struct {
+	id   string
+	user string
+	pass string
+}
+
+func getTeam(r *http.Request) *team {
+	if r.Method != "POST" {
+		return nil
+	}
+	id := strings.TrimPrefix(r.URL.Path, "/team/")
+	if _, err := strconv.Atoi(id); err != nil {
+		return nil
+	}
+	user, pass := r.FormValue("tguser"), r.FormValue("tgpass")
+	if user == "" || pass == "" {
+		return nil
+	}
+	return &team{id, user, pass}
+}
+
 func handler(w http.ResponseWriter, r *http.Request) {
-	if !(time.Now().Sub(then) < time.Hour*24) {
-		err := scrape()
+	t := getTeam(r)
+	if t == nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	if !(time.Now().Sub(latest(t.id)) < time.Hour*24) {
+		err := scrape(t)
 		if err == nil {
 			var buf []byte
 			then = time.Now()
 			buf, err = then.GobEncode()
 			if err == nil {
-				err = ioutil.WriteFile(filepath.Join(tgpath, "latest"), buf, 0644)
+				err = ioutil.WriteFile(filepath.Join(tgpath, t.id, "latest"), buf, 0644)
 			}
 		}
 		if err != nil {
 			log.Printf("error updating dashboard: %v", err)
 		}
 	}
-	http.ServeFile(w, r, filepath.Join(tgpath, "dashboard.png"))
+	http.ServeFile(w, r, filepath.Join(tgpath, t.id, "dashboard.png"))
 }
 
+// a non-headless mode for testing
 func interactive(ctx context.Context, tasks cdp.Tasks) error {
 	c, err := cdp.New(ctx, cdp.WithLog(log.Printf))
 	if err != nil {
@@ -95,16 +122,16 @@ func headless(ctx context.Context, tasks cdp.Tasks) error {
 	return c.Run(ctx, tasks)
 }
 
-func scrape() error {
+func scrape(t *team) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	tasks := cdp.Tasks{
-		cdp.Navigate(`https://www.teamgage.com/Account/Login?ReturnUrl=%2FPortal%2F10077%2FReports%2FSingleReport%2F` + tgteam),
+		cdp.Navigate(`https://www.teamgage.com/Account/Login?ReturnUrl=%2FPortal%2F10077%2FReports%2FSingleReport%2F` + t.id),
 		cdp.Sleep(5 * time.Second),
 		cdp.WaitVisible(`#Email`, cdp.ByID),
-		cdp.SendKeys(`#Email`, tguser, cdp.ByID),
+		cdp.SendKeys(`#Email`, t.user, cdp.ByID),
 		cdp.WaitVisible(`#Password`, cdp.ByID),
-		cdp.SendKeys(`#Password`, tgpass, cdp.ByID),
+		cdp.SendKeys(`#Password`, t.pass, cdp.ByID),
 		cdp.WaitVisible(`#login-btn`, cdp.ByID),
 		cdp.Click(`#login-btn`, cdp.ByID),
 		cdp.WaitVisible(`div.form-content`, cdp.ByQuery),
@@ -112,7 +139,7 @@ func scrape() error {
 	}
 	byts := make([][]byte, 8)
 	tasks = append(tasks, screenshots(byts)...)
-	tasks = append(tasks, writes(byts)...)
+	tasks = append(tasks, writes(t.id, byts)...)
 	return headless(ctx, tasks)
 }
 
@@ -126,13 +153,13 @@ func screenshots(byts [][]byte) cdp.Tasks {
 	return tasks
 }
 
-func writes(byts [][]byte) cdp.Tasks {
+func writes(id string, byts [][]byte) cdp.Tasks {
 	return cdp.Tasks{cdp.ActionFunc(func(context.Context, cdptypes.Handler) error {
 		byt, err := join(byts...)
 		if err != nil {
 			return err
 		}
-		return ioutil.WriteFile(filepath.Join(tgpath, "dashboard.png"), byt, 0644)
+		return ioutil.WriteFile(filepath.Join(tgpath, id, "dashboard.png"), byt, 0644)
 	})}
 }
 
