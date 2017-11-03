@@ -33,17 +33,8 @@ func main() {
 		}
 		tgpath = filepath.Join(u.HomeDir, "teamgage")
 	}
-	_, err := os.Stat(tgpath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			err = os.MkdirAll(tgpath, 0777)
-		}
-		if err != nil {
-			panic(err)
-		}
-	}
 	http.HandleFunc("/team/", handler)
-	log.Fatal(http.ListenAndServe(":80", nil))
+	log.Fatal(http.ListenAndServe("localhost:5138", nil)) // :80
 }
 
 func latest(tid string) time.Time {
@@ -69,6 +60,15 @@ func getTeam(r *http.Request) *team {
 	if _, err := strconv.Atoi(id); err != nil {
 		return nil
 	}
+	_, err := os.Stat(filepath.Join(tgpath, id))
+	if err != nil {
+		if os.IsNotExist(err) {
+			err = os.MkdirAll(filepath.Join(tgpath, id), 0777)
+		}
+		if err != nil {
+			panic(err)
+		}
+	}
 	user, pass := r.FormValue("tguser"), r.FormValue("tgpass")
 	if user == "" || pass == "" {
 		return nil
@@ -86,8 +86,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		err := scrape(t)
 		if err == nil {
 			var buf []byte
-			then = time.Now()
-			buf, err = then.GobEncode()
+			buf, err = time.Now().GobEncode()
 			if err == nil {
 				err = ioutil.WriteFile(filepath.Join(tgpath, t.id, "latest"), buf, 0644)
 			}
@@ -155,7 +154,7 @@ func screenshots(byts [][]byte) cdp.Tasks {
 
 func writes(id string, byts [][]byte) cdp.Tasks {
 	return cdp.Tasks{cdp.ActionFunc(func(context.Context, cdptypes.Handler) error {
-		byt, err := join(byts...)
+		byt, err := join(id, byts...)
 		if err != nil {
 			return err
 		}
@@ -163,7 +162,7 @@ func writes(id string, byts [][]byte) cdp.Tasks {
 	})}
 }
 
-func join(bs ...[]byte) ([]byte, error) {
+func join(id string, bs ...[]byte) ([]byte, error) {
 	if len(bs) > 8 {
 		return nil, fmt.Errorf("expecting 8 images or less, got %d", len(bs))
 	}
@@ -173,15 +172,13 @@ func join(bs ...[]byte) ([]byte, error) {
 	})
 	draw.Draw(rgba, rgba.Bounds(), &image.Uniform{color.White}, image.ZP, draw.Src)
 	for i, v := range bs {
+		ioutil.WriteFile(filepath.Join(tgpath, id, strconv.Itoa(i)+".png"), v, 0644)
 		buf := bytes.NewBuffer(v)
 		img, err := png.Decode(buf)
 		if err != nil {
 			return nil, err
 		}
-		var x, w, h int
-		if i == 0 { // hack because headless generates a larger first image for some reason
-			x = 103
-		}
+		var w, h int
 		if i >= 4 {
 			w = (i - 4) * 206
 			h = 356
@@ -192,7 +189,7 @@ func join(bs ...[]byte) ([]byte, error) {
 			Min: image.Point{w, h},
 			Max: image.Point{w + 206, h + 356},
 		}
-		draw.Draw(rgba, r, img, image.Point{x, 0}, draw.Src)
+		draw.Draw(rgba, r, img, image.ZP, draw.Src)
 	}
 	wr := &bytes.Buffer{}
 	err := png.Encode(wr, rgba)
