@@ -13,7 +13,7 @@ import (
 	"github.com/srnsw/tg"
 )
 
-const serveAt = "localhost:5138"
+const serveAt = ":80"
 
 func main() {
 	http.HandleFunc("/team/", teamHandler)
