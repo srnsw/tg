@@ -17,13 +17,13 @@ import (
 	cdp "github.com/knq/chromedp"
 	cdptypes "github.com/knq/chromedp/cdp"
 	"github.com/knq/chromedp/client"
+
 	"github.com/srnsw/tg"
 )
 
 func main() {
 	ts := tg.Teams()
 	for _, t := range ts {
-		log.Printf("updating dash for team %s", t.ID)
 		_, err := os.Stat(filepath.Join(tg.TGPATH, t.ID))
 		if err != nil {
 			if os.IsNotExist(err) {

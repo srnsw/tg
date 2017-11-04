@@ -5,5 +5,6 @@ Requires=chrome.service
 [Service]
 Type=oneshot
 User=root
-Environment="TGPATH=/var/lib/teamgage"
+Environment=TGPATH=/var/lib/teamgage
+PassEnvironment=TGPATH
 ExecStart=/usr/local/bin/tgupdate
