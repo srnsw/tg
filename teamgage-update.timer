@@ -1,0 +1,11 @@
+[Unit]
+Description=Timer for Teamgage screenshoting service
+
+[Timer]
+OnBootSec=10min
+# Time between running each consecutive time
+OnUnitActiveSec=4h
+Unit=teamgage-update.service
+
+[Install]
+WantedBy=multi-user.target

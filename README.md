@@ -1,59 +1,37 @@
-tg serves up teamgage dashboards as simple png files
+tg serves up teamgage dashboards as simple png files. It comprises two services: tgserve (a simple webserver that serves the dashboard images) and tgupdate (uses chrome headless browser to scrape teamgage).
 
 # Install
 
-Install golang and Chrome (https://www.google.com/chrome/browser/desktop/index.html \ sudo dpkg -i google-chrome-stable_current_amd64.deb \ sudo apt-get -f install)
+Install golang
 
-copy tg binary to /usr/local/bin/tg
+Install Google Chrome (https://www.google.com/chrome/browser/desktop/index.html):
 
-`sudo chown root /usr/local/bin/tg`
-`sudo chmod +s /usr/local/bin/tg`
+    sudo dpkg -i google-chrome-stable_current_amd64.deb
+    sudo apt-get -f install
 
-(maybe `sudo setcap cap_net_raw=eip /usr/local/bin/tg`)
+copy tg binaries to /usr/local/bin/
 
-two services files:
+    sudo chown root /usr/local/bin/tgserve
+    sudo chmod +s /usr/local/bin/tgserve
+    sudo chown root /usr/local/bin/tgupdate
+    sudo chmod +s /usr/local/bin/tgupdate
 
-/etc/systemd/system/chrome.service
-[Unit]
-Description=Chrome headless service
-Before=teamgage.service
+(maybe `sudo setcap cap_net_raw=eip /usr/local/bin/tgserve`)
 
-[Service]
-User=root
-ExecStart=/usr/bin/google-chrome --headless --disable-gpu --remote-debugging-port=9222
-Restart=always
+Install these systemd services files:
 
-[Install]
-WantedBy=teamgage.service
+  - /etc/systemd/system/chrome.service
+  - /etc/systemd/system/teamgage-serve.service
+  - /etc/systemd/system/teamgage-update.service
 
-/etc/systemd/system/teamgage.service
-[Unit]
-Description=Chrome headless service
-Before=teamgage.service
+Start and enable teamgage-serve and teamgage-update.timer.
 
-[Service]
-User=root
-ExecStart=/usr/bin/google-chrome --headless --disable-gpu --remote-debugging-port=9222
-Restart=always
+Systemctl cheats:
 
-[Install]
-WantedBy=teamgage.service
-richard_lehane@instance-3:/etc/systemd/system$ cat teamgage.service
-[Unit]
-Description=Teamgage screenshoting service
-Wants=chrome.service
+  - To start: sudo systemctl start application.service | application.timer
+  - To restart: sudo systemctl restart application.service
+  - To enable loading at boot: sudo systemctl enable application.service
+  - To disable: sudo systemctl disable application.service
+  - Check status: systemctl status application.service
 
-[Service]
-User=root
-Environment="TGTEAM=XXXXX"
-Environment="TGUSER=XXXXX"
-Environment="TGPASS=XXXXX"
-Environment="TGPATH=/var/lib/teamgage"
-ExecStart=/usr/local/bin/tg
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-
-To restart: sudo systemctl restart application.service
-To enable loading at boot: sudo systemctl enable application.service
+  For more, I like this [Digital Ocean tutorial](https://www.digitalocean.com/community/tutorials/understanding-systemd-units-and-unit-files).

@@ -1,0 +1,8 @@
+[Unit]
+Description=Teamgage screenshoting service
+Wants=chrome.service
+
+[Service]
+User=root
+Environment="TGPATH=/var/lib/teamgage"
+ExecStart=/usr/local/bin/tgupdate

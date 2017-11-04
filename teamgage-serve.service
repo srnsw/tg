@@ -1,0 +1,12 @@
+[Unit]
+Description=Teamgage dashboard server
+
+[Service]
+User=root
+Environment="TGTOKEN=XXXXX"
+Environment="TGPATH=/var/lib/teamgage"
+ExecStart=/usr/local/bin/tgserve
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

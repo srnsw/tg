@@ -166,6 +166,14 @@ func max(img image.Image) image.Point {
 	return image.Point{}
 }
 
+// we tolerate slight differences in image dimensions
+func difference(tolerance, a, b int) bool {
+	if a-b > tolerance || b-a > tolerance {
+		return true
+	}
+	return false
+}
+
 func join(bs ...[]byte) ([]byte, error) {
 	if len(bs) > 8 || len(bs) < 1 {
 		return nil, fmt.Errorf("expecting between 0 and 8 images, got %d", len(bs))
@@ -182,7 +190,7 @@ func join(bs ...[]byte) ([]byte, error) {
 		if maxX == 0 {
 			maxX, maxY = img.Bounds().Max.X, img.Bounds().Max.Y
 		} else {
-			if maxX != img.Bounds().Max.X || maxY != img.Bounds().Max.Y {
+			if difference(5, maxX, img.Bounds().Max.X) || difference(5, maxY, img.Bounds().Max.Y) {
 				return nil, fmt.Errorf("expecting all images to have same dimensions (%d, %d): got %d, %d", maxX, maxY, img.Bounds().Max.X, img.Bounds().Max.Y)
 			}
 		}
