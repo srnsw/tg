@@ -5,3 +5,7 @@ Before=teamgage-update.service
 [Service]
 User=root
 ExecStart=/usr/bin/google-chrome --headless --disable-gpu --remote-debugging-port=9222
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

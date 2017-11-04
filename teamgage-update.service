@@ -3,6 +3,8 @@ Description=Teamgage screenshoting service
 Wants=chrome.service
 
 [Service]
+Type=oneshot
 User=root
 Environment="TGPATH=/var/lib/teamgage"
 ExecStart=/usr/local/bin/tgupdate
+RemainAfterExit=true
