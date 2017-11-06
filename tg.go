@@ -12,13 +12,15 @@ import (
 var (
 	TGPATH  = os.Getenv("TGPATH")
 	tgtoken = os.Getenv("TGTOKEN")
+
+	pathErr = errors.New("TGPATH isn't set")
 )
 
 func init() {
 	if TGPATH == "" {
 		u, err := user.Current()
 		if err != nil {
-			panic(err)
+			return
 		}
 		TGPATH = filepath.Join(u.HomeDir, "teamgage")
 	}
@@ -28,7 +30,7 @@ func init() {
 			err = os.MkdirAll(TGPATH, 0777)
 		}
 		if err != nil {
-			panic(err)
+			return
 		}
 	}
 }
@@ -44,6 +46,9 @@ func Validate(tok string) bool {
 }
 
 func Register(nt Team) error {
+	if TGPATH == "" {
+		return pathErr
+	}
 	teams := Teams()
 	var exists bool
 	for i, t := range teams {
@@ -67,6 +72,9 @@ func Register(nt Team) error {
 }
 
 func Unregister(nt Team) error {
+	if TGPATH == "" {
+		return pathErr
+	}
 	teams := Teams()
 	var exists bool
 	var tid int

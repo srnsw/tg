@@ -23,6 +23,10 @@ import (
 
 func main() {
 	ts := tg.Teams()
+	verboseLog := true
+	if verboseLog {
+		log.Printf("Starting update at %s\nTGPATH is set to %s\nUpdating %d teams", time.Now().Format(time.RFC822), tg.TGPATH, len(ts))
+	}
 	for _, t := range ts {
 		_, err := os.Stat(filepath.Join(tg.TGPATH, t.ID))
 		if err != nil {
@@ -30,7 +34,8 @@ func main() {
 				err = os.MkdirAll(filepath.Join(tg.TGPATH, t.ID), 0777)
 			}
 			if err != nil {
-				panic(err)
+				log.Printf("FATAL: error creating team folder: %s\n", t.ID)
+				return
 			}
 		}
 		err = scrape(t)
@@ -42,7 +47,7 @@ func main() {
 			}
 		}
 		if err != nil {
-			log.Printf("error updating dashboard: %v", err)
+			log.Printf("CAN'T UPDATE: error updating dashboard %s, got: %v\n", t.ID, err)
 		}
 	}
 }
