@@ -54,7 +54,7 @@ func main() {
 
 // a non-headless mode for testing
 func interactive(ctx context.Context, tasks cdp.Tasks) error {
-	c, err := cdp.New(ctx, cdp.WithLog(log.Printf))
+	c, err := cdp.New(ctx)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,8 @@ func interactive(ctx context.Context, tasks cdp.Tasks) error {
 }
 
 func headless(ctx context.Context, tasks cdp.Tasks) error {
-	c, err := cdp.New(ctx, cdp.WithTargets(client.New().WatchPageTargets(ctx)), cdp.WithLog(log.Printf))
+	time.Sleep(30 * time.Second) // sleep to make sure chrome service is started
+	c, err := cdp.New(ctx, cdp.WithTargets(client.New().WatchPageTargets(ctx)))
 	if err != nil {
 		return err
 	}
