@@ -2,31 +2,38 @@ tg serves up teamgage dashboards as simple png files. It comprises two services:
 
 # Install
 
-Install golang
+Install golang (https://golang.org/doc/install).
 
-Install Google Chrome (https://www.google.com/chrome/browser/desktop/index.html):
+Install Google Chrome (https://www.google.com/chrome/browser/desktop/index.html). After finding the most recent deb file, do:
 
     sudo dpkg -i google-chrome-stable_current_amd64.deb
     sudo apt-get -f install
 
-copy tg binaries to /usr/local/bin/
+Install tg binaries:
+
+    go get github.com/srnsw/tg/tgupdate
+    go get github.com/srnsw/tg/tgserve
+
+Copy tg binaries to /usr/local/bin/ then:
 
     sudo chown root /usr/local/bin/tgserve
-    sudo chmod +s /usr/local/bin/tgserve
     sudo chown root /usr/local/bin/tgupdate
-    sudo chmod +s /usr/local/bin/tgupdate
 
-(maybe `sudo setcap cap_net_raw=eip /usr/local/bin/tgserve`)
+Install these systemd files by copying to /etc/systemd/system/ folder:
 
-Install these systemd services files:
+    chrome.service
+    teamgage-serve.service
+    teamgage-update.service
+    teamgage-update.timer
 
-  - /etc/systemd/system/chrome.service
-  - /etc/systemd/system/teamgage-serve.service
-  - /etc/systemd/system/teamgage-update.service
+Enable teamgage-serve and teamgage-update.timer:
 
-Start and enable teamgage-serve and teamgage-update.timer.
+    sudo systemctl enable teamgage-serve.service
+    sudo systemctl enable teamgage-update.timer
 
-Systemctl cheats:
+Start the services with systemctl start or just reboot.
+
+# Systemctl cheats
 
   - To start: sudo systemctl start application.service | application.timer
   - To restart: sudo systemctl restart application.service
